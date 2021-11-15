@@ -1,2 +1,10 @@
 # kubectl
-The package kubectl and oc client based on UBI system
+This image includes as below:
+
+- kubectl client
+- OC client
+- aws-cli
+
+based on UBI system
+
+## Usage
