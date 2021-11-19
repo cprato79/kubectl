@@ -1,0 +1,47 @@
+FROM registry.access.redhat.com/ubi8/ubi AS ubi-micro-build
+
+ARG AWS_TARGET_BIN_DIR=/usr/local/bin
+
+# WORKDIR /workspace
+RUN mkdir -p /mnt/rootfs
+## ::: utility and dependecies packages
+RUN set -eux; \
+    echo "===> Installing OS Utility"; \
+    yum install \
+        --installroot /mnt/rootfs \
+        --releasever 8 \
+        --setopt install_weak_deps=false \
+        --setopt tsflags=nodocs \
+        less gawk groff-base unzip -y; \
+    yum clean all \
+        --installroot /mnt/rootfs; \
+    rm -rf /mnt/rootfs/var/cache /mnt/rootfs/var/log/yum.*; \
+    echo "===> Installing the aws-cli"; \
+    curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -O -L -J; \
+    /mnt/rootfs/usr/bin/unzip awscli-exe-linux-x86_64.zip && ./aws/install --bin-dir /mnt/rootfs${AWS_TARGET_BIN_DIR} --install-dir /mnt/rootfs/usr/local/aws-cli; \
+    echo "===> Awscli workaround to install on distroless environment"; \
+    src_link_current=$(basename /mnt/rootfs/usr/local/aws-cli/v?/?.*); \
+    rm -f /mnt/rootfs/usr/local/aws-cli/v?/current; \
+    pushd /mnt/rootfs/usr/local/aws-cli/v?; \
+    ln -sf $src_link_current current && popd; \
+    src_link=$(echo /mnt/rootfs/usr/local/aws-cli/v2/current/bin| awk -F rootfs '{ print $2 }'); \
+    ln -sf $src_link/aws_completer /mnt/rootfs${AWS_TARGET_BIN_DIR}/aws_completer; \
+    ln -sf $src_link/aws /mnt/rootfs${AWS_TARGET_BIN_DIR}/aws; \
+    rm -rf awscli-exe-linux-x86_64.zip aws; \
+    echo "===> Installing both the Kubectl and the OC client"; \
+    curl -L https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz | tar -xzf - ; \
+    mv openshift-origin-client*/oc openshift-origin-client*/kubectl /mnt/rootfs${AWS_TARGET_BIN_DIR}/; \
+    rm -rf openshift-origin-client*
+
+FROM registry.access.redhat.com/ubi8/ubi-micro AS ubi-micro
+
+## ::: Atomic/OpenShift Labels - https://github.com/projectatomic/ContainerApplicationGenericLabels
+## ::: the LABEL directive is not affect the image size
+LABEL name="kubectl" \
+      version="1.1.0" \
+      authors="cprato79@gmail.com" \
+      description="Utility Image aimed for managing the following resources: aws, kubernetes and openshift cluster."
+
+ENV CONTAINER=docker
+
+COPY --from=ubi-micro-build /mnt/rootfs/ /
