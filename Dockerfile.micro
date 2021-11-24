@@ -1,6 +1,9 @@
 FROM registry.access.redhat.com/ubi8/ubi AS ubi-micro-build
 
-ARG AWS_TARGET_BIN_DIR=/usr/local/bin
+# okd4 = v4
+# okd3 = v3
+ARG OKD_VERSION=v4 \
+    AWS_TARGET_BIN_DIR=/usr/local/bin
 
 # WORKDIR /workspace
 RUN mkdir -p /mnt/rootfs
@@ -28,17 +31,20 @@ RUN set -eux; \
     ln -sf $src_link/aws_completer /mnt/rootfs${AWS_TARGET_BIN_DIR}/aws_completer; \
     ln -sf $src_link/aws /mnt/rootfs${AWS_TARGET_BIN_DIR}/aws; \
     rm -rf awscli-exe-linux-x86_64.zip aws; \
-    echo "===> Installing both the Kubectl and the OC client"; \
-    curl -L https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz | tar -xzf - ; \
-    mv openshift-origin-client*/oc openshift-origin-client*/kubectl /mnt/rootfs${AWS_TARGET_BIN_DIR}/; \
-    rm -rf openshift-origin-client*
+    echo "===> Installing the OKD ${OKD_VERSION} clients"; \
+    [ ${OKD_VERSION} == 'v3' ] && curl -L https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz | tar -xzf - ; \
+    [ ${OKD_VERSION} == 'v3' ] && mv openshift-origin-client*/oc openshift-origin-client*/kubectl /mnt/rootfs${AWS_TARGET_BIN_DIR}/; \
+    [ ${OKD_VERSION} == 'v3' ] && rm -rf openshift-origin-client*; \
+    [ ${OKD_VERSION} == 'v4' ] && curl -L https://mirror.openshift.com/pub/openshift-v4/clients/oc/latest/linux/oc.tar.gz | tar -xzf - ; \
+    [ ${OKD_VERSION} == 'v4' ] && mv oc kubectl /mnt/rootfs${AWS_TARGET_BIN_DIR}/; \
+    [ ${OKD_VERSION} == 'v4' ] && rm -rf README;
 
 FROM registry.access.redhat.com/ubi8/ubi-micro AS ubi-micro
 
 ## ::: Atomic/OpenShift Labels - https://github.com/projectatomic/ContainerApplicationGenericLabels
 ## ::: the LABEL directive is not affect the image size
 LABEL name="kubectl" \
-      version="1.1.0" \
+      version="1.2.0" \
       authors="cprato79@gmail.com" \
       description="Utility Image aimed for managing the following resources: aws, kubernetes and openshift cluster."
 
