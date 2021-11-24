@@ -3,9 +3,13 @@ FROM registry.access.redhat.com/ubi8/ubi
 ## ::: Atomic/OpenShift Labels - https://github.com/projectatomic/ContainerApplicationGenericLabels
 ## ::: the LABEL directive is not affect the image size
 LABEL name="kubectl" \
-      version="1.0.0" \
+      version="1.2.0" \
       authors="cprato79@gmail.com" \
       description="Utility Image aimed for managing the following resources: aws, kubernetes and openshift cluster."
+
+# okd4 = v4
+# okd3 = v3
+ARG OKD_VERSION=v4
 
 ENV CONTAINER=docker
 
@@ -26,12 +30,16 @@ RUN set -eux; \
     unzip awscliv2.zip && ./aws/install && rm -rf awscliv2.zip; \
     # pip3 install --upgrade awscli; \
     chmod 777 /.docker/config.json /.aws/config; \
-    echo "===> Installing both the Kubectl and OC client"; \
-    curl -L# https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz -o openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz; \
-      tar xvf openshift-origin-client-tools*.tar.gz; \
-      cd openshift-origin-client*/; \
-      mv oc kubectl /usr/local/bin/; \
-      rm -rf openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz;
+    echo "===> Installing the OKD ${OKD_VERSION} clients"; \
+    [ ${OKD_VERSION} == 'v3' ] && curl -L# https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz -o openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz; \
+     [ ${OKD_VERSION} == 'v3' ] && tar xvf openshift-origin-client-tools*.tar.gz; \
+     [ ${OKD_VERSION} == 'v3' ] &&  cd openshift-origin-client*/; \
+     [ ${OKD_VERSION} == 'v3' ] &&  mv oc kubectl /usr/local/bin/; \
+     [ ${OKD_VERSION} == 'v3' ] &&  rm -rf openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz; \
+    [ ${OKD_VERSION} == 'v4' ] && curl -L# https://mirror.openshift.com/pub/openshift-v4/clients/oc/latest/linux/oc.tar.gz -o oc.tar.gz; \
+     [ ${OKD_VERSION} == 'v4' ] &&  tar xvf oc.tar.gz; \
+     [ ${OKD_VERSION} == 'v4' ] &&  mv oc kubectl /usr/local/bin/; \
+     [ ${OKD_VERSION} == 'v4' ] &&  rm -rf README;
 
 # USER 1001
 
